@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -55,7 +56,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         currency: currencyInfo.code,
         currencySymbol: currencyInfo.symbol,
       };
-      const user = await storage.createUser(userWithCurrency);
+      const hashedPassword = await bcrypt.hash(result.data.password, 10);
+
+      const userWithCurrency = {
+          ...result.data,
+          password: hashedPassword,
+          currency: currencyInfo.code,
+          currencySymbol: currencyInfo.symbol,
+            };
       req.session.userId = user.id;
       const { password: _, ...safeUser } = user;
       return res.json(safeUser);
@@ -68,15 +76,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { username, password } = req.body;
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password) {
+     if (!user) {
         return res.status(401).json({ error: "Invalid username or password" });
-      }
-      req.session.userId = user.id;
-      const { password: _, ...safeUser } = user;
-      return res.json(safeUser);
-    } catch (e: any) {
-      return res.status(500).json({ error: e.message });
-    }
+}
+
+     const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+       return res.status(401).json({ error: "Invalid username or password" });
+}
   });
 
   app.post("/api/auth/logout", (req, res) => {
