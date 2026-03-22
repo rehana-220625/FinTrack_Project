@@ -169,7 +169,7 @@ export default function BudgetPage() {
               <p className="text-sm text-muted-foreground mb-4">Enter your spending limit for this month</p>
               <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
                   <input
                     data-testid="input-budget-amount"
                     type="number"

@@ -11,12 +11,13 @@ import { logout } from "@/lib/auth";
 import { GravityModeButton } from "./GravityMode";
 import { useToast } from "@/hooks/use-toast";
 
-const baseNavItems = [
+const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/expenses", label: "Expenses", icon: Receipt },
-  { path: "/budget", label: "Budget", icon: PiggyBank },
+  { path: "/expenses", label: "Adding Expense", icon: Receipt },
+  { path: "/budget", label: "Setting Monthly Budgets", icon: PiggyBank },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/profile", label: "Profile", icon: User },
+  { path: "/admin", label: "Admin Page", icon: Shield }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -26,10 +27,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/me"] });
-
-  const navItems = user?.isAdmin
-    ? [...baseNavItems, { path: "/admin", label: "Admin", icon: Shield }]
-    : baseNavItems;
 
   const handleLogout = async () => {
     await logout();

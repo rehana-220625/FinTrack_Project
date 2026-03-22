@@ -5,6 +5,54 @@ import { insertUserSchema, insertExpenseSchema, insertBudgetSchema } from "@shar
 import { getCurrencyByCountry } from "@shared/currencies";
 import session from "express-session";
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
+
+const SESSION_FILE = path.join(process.cwd(), "sessions.json");
+
+class FileStore extends session.Store {
+  private sessions: Record<string, any> = {};
+
+  constructor() {
+    super();
+    try {
+      if (fs.existsSync(SESSION_FILE)) {
+        this.sessions = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
+      }
+    } catch (err) {
+      console.error("Failed to load sessions.json:", err);
+    }
+  }
+
+  private saveSessions() {
+    try {
+      fs.writeFileSync(SESSION_FILE, JSON.stringify(this.sessions, null, 2));
+    } catch (err) {
+      console.error("Failed to save sessions.json:", err);
+    }
+  }
+
+  get(sid: string, callback: (err: any, session?: session.SessionData | null) => void) {
+    const sess = this.sessions[sid];
+    if (sess) {
+      callback(null, sess);
+    } else {
+      callback(null, null);
+    }
+  }
+
+  set(sid: string, sess: session.SessionData, callback?: (err?: any) => void) {
+    this.sessions[sid] = sess;
+    this.saveSessions();
+    if (callback) callback();
+  }
+
+  destroy(sid: string, callback?: (err?: any) => void) {
+    delete this.sessions[sid];
+    this.saveSessions();
+    if (callback) callback();
+  }
+}
 
 declare module "express-session" {
   interface SessionData {
@@ -33,6 +81,7 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   app.set("trust proxy", 1);
   app.use(session({
+    store: new FileStore(),
     secret: process.env.SESSION_SECRET || "fintrack-secret-2024",
     resave: false,
     saveUninitialized: false,
@@ -126,7 +175,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const result = insertExpenseSchema.safeParse(req.body);
       if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
       const expense = await storage.createExpense(req.session.userId!, result.data);
-      return res.json(expense);
+
+      let budgetExceeded = false;
+      let monthTotal = 0;
+      let budgetAmount = 0;
+      
+      const now = new Date(expense.date);
+      const budget = await storage.getBudget(req.session.userId!, now.getMonth() + 1, now.getFullYear());
+      
+      if (budget && budget.amount > 0) {
+        const expenses = await storage.getExpenses(req.session.userId!);
+        monthTotal = expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getMonth() + 1 === now.getMonth() + 1 && d.getFullYear() === now.getFullYear();
+        }).reduce((s, e) => s + e.amount, 0);
+
+        if (monthTotal > budget.amount) {
+          budgetExceeded = true;
+          budgetAmount = budget.amount;
+        }
+      }
+
+      return res.json({ ...expense, budgetExceeded, budgetAmount, monthTotal });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
@@ -182,7 +252,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Admin routes
-  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+  app.get("/api/admin/stats", requireAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       const expenses = await storage.getAllExpenses();
@@ -211,7 +281,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  app.get("/api/admin/users", requireAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       const expenses = await storage.getAllExpenses();
@@ -230,7 +300,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/admin/expenses", requireAdmin, async (req, res) => {
+  app.get("/api/admin/expenses", requireAuth, async (req, res) => {
     try {
       const expenses = await storage.getAllExpenses();
       const users = await storage.getAllUsers();
@@ -243,8 +313,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Seed demo user on first startup
-  const demoUser = await storage.getUserByUsername("demo");
-  if (!demoUser) {
+  if (storage.isDataEmpty()) {
+    const demoUser = await storage.getUserByUsername("demo");
+    if (!demoUser) {
     const user = await storage.createUser({
       username: "demo",
       password: "demo123",
@@ -298,6 +369,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await storage.createExpense(user2.id, exp);
     }
     await storage.setBudget(user2.id, { month: 3, year: 2026, amount: 1500 });
+    }
   }
 
   return httpServer;

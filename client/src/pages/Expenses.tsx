@@ -66,7 +66,7 @@ export default function Expenses() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/expenses", data).then(r => r.json()),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -74,7 +74,16 @@ export default function Expenses() {
         setShowForm(false);
         setForm(emptyForm);
       }, 1200);
-      toast({ title: "Expense added!", description: "Your expense has been recorded." });
+
+      if (data.budgetExceeded) {
+        toast({
+          title: "Budget Exceeded!",
+          description: `This expense pushed your monthly total (${sym}${data.monthTotal.toFixed(2)}) over your set limit of ${sym}${data.budgetAmount.toFixed(2)}.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: "Expense added!", description: "Your expense has been recorded." });
+      }
     },
     onError: () => toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" }),
   });
@@ -176,7 +185,7 @@ export default function Expenses() {
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Amount ($)</label>
+                    <label className="text-sm font-medium text-foreground">Amount ({sym})</label>
                     <input
                       data-testid="input-amount"
                       type="number"

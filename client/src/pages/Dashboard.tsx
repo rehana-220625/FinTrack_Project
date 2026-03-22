@@ -65,14 +65,14 @@ function StatCard({ title, value, subtitle, icon: Icon, gradient, change, testId
   );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, sym = "$" }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-card-border rounded-xl px-4 py-3 shadow-xl">
         {label && <p className="text-xs text-muted-foreground mb-1">{label}</p>}
         {payload.map((p: any, i: number) => (
           <p key={i} className="text-sm font-semibold" style={{ color: p.color || p.fill }}>
-            {p.name}: ${Number(p.value).toFixed(2)}
+            {p.name}: {sym}{Number(p.value).toFixed(2)}
           </p>
         ))}
       </div>
@@ -111,14 +111,14 @@ export default function Dashboard() {
       alertedRef.current = true;
       toast({
         title: "🚨 Budget Exceeded!",
-        description: `You've spent $${totalExpenses.toFixed(2)} — $${(totalExpenses - budgetAmount).toFixed(2)} over your $${budgetAmount.toFixed(2)} budget.`,
+        description: `You've spent ${sym}${totalExpenses.toFixed(2)} — ${sym}${(totalExpenses - budgetAmount).toFixed(2)} over your ${sym}${budgetAmount.toFixed(2)} budget.`,
         variant: "destructive",
       });
     } else if (budgetUsedPct >= 80) {
       alertedRef.current = true;
       toast({
         title: "⚠️ Budget Warning",
-        description: `You've used ${budgetUsedPct.toFixed(0)}% of your budget. Only $${remaining.toFixed(2)} remaining.`,
+        description: `You've used ${budgetUsedPct.toFixed(0)}% of your budget. Only ${sym}${remaining.toFixed(2)} remaining.`,
       });
     }
   }, [budgetUsedPct, budget, expenses.length]);
@@ -228,7 +228,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-semibold text-foreground">Budget Overview</h3>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  ${totalExpenses.toFixed(2)} spent of ${budgetAmount.toFixed(2)}
+                  {sym}{totalExpenses.toFixed(2)} spent of {sym}{budgetAmount.toFixed(2)}
                 </p>
               </div>
               <div className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
@@ -296,7 +296,7 @@ export default function Dashboard() {
                         <Cell key={i} fill={CATEGORY_COLORS[entry.name] || "#94a3b8"} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip sym={sym} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-2">
@@ -306,7 +306,7 @@ export default function Dashboard() {
                         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CATEGORY_COLORS[name] || "#94a3b8" }} />
                         <span className="text-xs text-muted-foreground truncate">{name}</span>
                       </div>
-                      <span className="text-xs font-semibold text-foreground shrink-0">${value.toFixed(0)}</span>
+                      <span className="text-xs font-semibold text-foreground shrink-0">{sym}{value.toFixed(0)}</span>
                     </div>
                   ))}
                 </div>
@@ -329,7 +329,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-10" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "currentColor" }} className="text-muted-foreground" />
                 <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-muted-foreground" />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip sym={sym} />} />
                 <Bar dataKey="amount" name="Expenses" radius={[6, 6, 0, 0]}>
                   {monthlyData.map((_, i) => (
                     <Cell key={i} fill={i === monthlyData.length - 1 ? "#3b82f6" : "#6366f1"} fillOpacity={i === monthlyData.length - 1 ? 1 : 0.6} />
@@ -355,7 +355,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-10" />
               <XAxis dataKey="day" tick={{ fontSize: 10, fill: "currentColor" }} className="text-muted-foreground" interval={4} />
               <YAxis tick={{ fontSize: 11, fill: "currentColor" }} className="text-muted-foreground" />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip sym={sym} />} />
               <Line type="monotone" dataKey="amount" name="Expenses" stroke="#3b82f6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#3b82f6" }} />
             </LineChart>
           </ResponsiveContainer>
