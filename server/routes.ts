@@ -204,11 +204,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
-      const expense = await storage.getExpense(req.params.id);
+      const expense = await storage.getExpense(req.params.id as string);
       if (!expense || expense.userId !== req.session.userId) {
         return res.status(404).json({ error: "Expense not found" });
       }
-      const updated = await storage.updateExpense(req.params.id, req.body);
+      const updated = await storage.updateExpense(req.params.id as string, req.body);
       return res.json(updated);
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
@@ -217,11 +217,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
-      const expense = await storage.getExpense(req.params.id);
+      const expense = await storage.getExpense(req.params.id as string);
       if (!expense || expense.userId !== req.session.userId) {
         return res.status(404).json({ error: "Expense not found" });
       }
-      await storage.deleteExpense(req.params.id);
+      await storage.deleteExpense(req.params.id as string);
       return res.json({ success: true });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
@@ -313,7 +313,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Seed demo user on first startup
-  if (storage.isDataEmpty()) {
+  if (await storage.isDataEmpty()) {
     const demoUser = await storage.getUserByUsername("demo");
     if (!demoUser) {
     const user = await storage.createUser({

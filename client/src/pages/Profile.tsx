@@ -235,7 +235,7 @@ export default function Profile() {
                     >
                       <option value="" disabled>Select country</option>
                       {COUNTRIES.map(c => (
-                        <option key={c.country} value={c.country}>{c.country}</option>
+                        <option key={c.name} value={c.name}>{c.name}</option>
                       ))}
                     </select>
                     {selectedCurrency && (
