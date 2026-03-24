@@ -65,8 +65,6 @@ declare module "express-session" {
   }
 }
 
-// ================= MIDDLEWARE =================
-
 function requireAuth(req: Request, res: Response, next: Function) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -191,8 +189,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(safeUser);
   });
 
-  // ================= EXPENSES =================
-
   app.get("/api/expenses", requireAuth, async (req, res) => {
     const expenses = await storage.getExpenses(req.session.userId!);
     return res.json(expenses);
@@ -229,7 +225,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(500).json({ error: e.message });
     }
   });
-  
+
   app.patch("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
       const expense = await storage.getExpense(req.params.id as string);
@@ -256,7 +252,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Budget routes origin/dharani
   app.get("/api/budgets", requireAuth, async (req, res) => {
     const budgets = await storage.getBudgets(req.session.userId!);
     return res.json(budgets);
@@ -283,7 +278,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Admin routes
   app.get("/api/admin/stats", requireAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
@@ -344,7 +338,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Seed demo user on first startup
   if (await storage.isDataEmpty()) {
     const demoUser = await storage.getUserByUsername("demo");
     if (!demoUser) {
@@ -356,7 +349,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       country: "United States",
       currency: "USD",
       currencySymbol: "$",
-    }, true); // isAdmin = true
+    }, true); 
     const expenses = [
       { amount: 85.50, category: "Food & Dining", description: "Grocery shopping at Whole Foods", date: "2026-03-10" },
       { amount: 45.00, category: "Transportation", description: "Monthly bus pass", date: "2026-03-08" },
@@ -380,7 +373,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     await storage.setBudget(user.id, { month: 3, year: 2026, amount: 2000 });
     await storage.setBudget(user.id, { month: 2, year: 2026, amount: 1800 });
 
-    // Seed a second regular user for admin demo
+    
     const user2 = await storage.createUser({
       username: "sarah",
       password: "sarah123",
