@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-
 const app = express();
 const httpServer = createServer(app);
 
@@ -84,9 +83,9 @@ app.use((req, res, next) => {
     }
 
     const port = parseInt(process.env.PORT || "5000", 10);
-   httpServer.listen(port, () => {
-  log(`serving on port ${port}`);
-});
+    httpServer.listen(port, () => {
+      log(`serving on port ${port}`);
+    });
   } catch (err) {
     console.error("Fatal error during server startup:", err);
     process.exit(1);

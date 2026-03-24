@@ -419,14 +419,14 @@ export default function Landing() {
             </div>
             <div className="flex items-center gap-3">
               {[Twitter, Github, Linkedin, Globe].map((Icon, i) => (
-                <motion.div
+                <motion.a
                   key={i}
                   whileHover={{ scale: 1.2, y: -2 }}
                   href="#"
                   className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
                   <Icon size={18} />
-                </motion.div>
+                </motion.a>
               ))}
             </div>
           </div>

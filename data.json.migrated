@@ -47,6 +47,18 @@
       "id": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
       "avatar": null,
       "isAdmin": false
+    },
+    "2a606787-4a32-4cdb-99c6-ff501ca34500": {
+      "username": "Vikram",
+      "password": "123456",
+      "name": "Vikram",
+      "email": "vikram@gmail.com",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "id": "2a606787-4a32-4cdb-99c6-ff501ca34500",
+      "avatar": null,
+      "isAdmin": false
     }
   },
   "expenses": {
@@ -247,6 +259,33 @@
       "id": "537dac9b-8a26-4c18-84eb-bda54a09b0a5",
       "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
       "createdAt": "2026-03-16T11:29:33.484Z"
+    },
+    "815c6e14-69d5-4cec-a88a-8fc7f09e5061": {
+      "amount": 50,
+      "category": "Shopping",
+      "description": "things",
+      "date": "2026-03-23",
+      "id": "815c6e14-69d5-4cec-a88a-8fc7f09e5061",
+      "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
+      "createdAt": "2026-03-23T06:31:06.875Z"
+    },
+    "9744c373-7fa3-4140-a9df-c0bca41d4b4d": {
+      "amount": 1234,
+      "category": "Transportation",
+      "description": "cab",
+      "date": "2026-03-11",
+      "id": "9744c373-7fa3-4140-a9df-c0bca41d4b4d",
+      "userId": "2a606787-4a32-4cdb-99c6-ff501ca34500",
+      "createdAt": "2026-03-23T09:48:25.802Z"
+    },
+    "bb6fbc48-9b72-41d3-8c47-5a1430cadb5f": {
+      "amount": 12345,
+      "category": "Food & Dining",
+      "description": "biryani",
+      "date": "2026-03-23",
+      "id": "bb6fbc48-9b72-41d3-8c47-5a1430cadb5f",
+      "userId": "2a606787-4a32-4cdb-99c6-ff501ca34500",
+      "createdAt": "2026-03-23T09:48:57.471Z"
     }
   },
   "budgets": {
@@ -277,6 +316,13 @@
       "amount": 1000,
       "id": "e6b073cc-2f25-4943-8feb-3bcdedb1f22b",
       "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda"
+    },
+    "cda91156-ed38-4dfe-afc2-1fe4d6ad5d84": {
+      "month": 3,
+      "year": 2026,
+      "amount": 12345,
+      "id": "cda91156-ed38-4dfe-afc2-1fe4d6ad5d84",
+      "userId": "2a606787-4a32-4cdb-99c6-ff501ca34500"
     }
   }
 }

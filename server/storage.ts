@@ -1,7 +1,64 @@
 import { type User, type InsertUser, type Expense, type InsertExpense, type Budget, type InsertBudget } from "@shared/schema";
+import mongoose, { Schema, Document } from "mongoose";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
+
+// 1. Connect to MongoDB
+const MONGODB_URI = "mongodb://n221024_db_user:GJ1QRdNymHuBmUGF@ac-h1voymz-shard-00-00.iorr3sp.mongodb.net:27017,ac-h1voymz-shard-00-01.iorr3sp.mongodb.net:27017,ac-h1voymz-shard-00-02.iorr3sp.mongodb.net:27017/?ssl=true&replicaSet=atlas-ahnxv2-shard-0&authSource=admin&appName=Cluster0"
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log("Connected to MongoDB successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// 2. Define Mongoose Schemas and Models
+
+interface IUserDocument extends User, Document {
+  id: string;
+}
+
+const userSchema = new Schema<IUserDocument>({
+  id: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  avatar: { type: String, default: null },
+  isAdmin: { type: Boolean, default: false },
+  country: { type: String, default: "United States" },
+  currency: { type: String, default: "USD" },
+  currencySymbol: { type: String, default: "$" }
+});
+
+interface IExpenseDocument extends Expense, Document {
+  id: string;
+}
+
+const expenseSchema = new Schema<IExpenseDocument>({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true },
+  amount: { type: Number, required: true },
+  category: { type: String, required: true },
+  description: { type: String, required: true },
+  date: { type: String, required: true },
+  createdAt: { type: String, required: true }
+});
+
+interface IBudgetDocument extends Budget, Document {
+  id: string;
+}
+
+const budgetSchema = new Schema<IBudgetDocument>({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true },
+  month: { type: Number, required: true },
+  year: { type: Number, required: true },
+  amount: { type: Number, required: true }
+});
+
+const UserModel = mongoose.models.User || mongoose.model<IUserDocument>("User", userSchema);
+const ExpenseModel = mongoose.models.Expense || mongoose.model<IExpenseDocument>("Expense", expenseSchema);
+const BudgetModel = mongoose.models.Budget || mongoose.model<IBudgetDocument>("Budget", budgetSchema);
 
 const DATA_FILE = path.join(process.cwd(), "data.json");
 
@@ -20,151 +77,176 @@ export interface IStorage {
   getBudgets(userId: string): Promise<Budget[]>;
   getAllUsers(): Promise<User[]>;
   getAllExpenses(): Promise<Expense[]>;
-  isDataEmpty(): boolean;
+  isDataEmpty(): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User> = new Map();
-  private expenses: Map<string, Expense> = new Map();
-  private budgets: Map<string, Budget> = new Map();
-
+export class MongoStorage implements IStorage {
   constructor() {
-    this.loadData();
+    this.migrateDataIfNeeded();
   }
 
-  private loadData() {
+  private async migrateDataIfNeeded() {
     try {
       if (fs.existsSync(DATA_FILE)) {
-        const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-        if (data.users) this.users = new Map(Object.entries(data.users));
-        if (data.expenses) this.expenses = new Map(Object.entries(data.expenses));
-        if (data.budgets) this.budgets = new Map(Object.entries(data.budgets));
+        const userCount = await UserModel.countDocuments();
+        if (userCount === 0) {
+          console.log("MongoDB is empty. Migrating data from data.json...");
+          const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+
+          if (data.users && Object.keys(data.users).length > 0) {
+            const usersArray = Object.values(data.users);
+            await UserModel.insertMany(usersArray);
+            console.log(`Migrated ${usersArray.length} users.`);
+          }
+          if (data.expenses && Object.keys(data.expenses).length > 0) {
+            const expensesArray = Object.values(data.expenses);
+            await ExpenseModel.insertMany(expensesArray);
+            console.log(`Migrated ${expensesArray.length} expenses.`);
+          }
+          if (data.budgets && Object.keys(data.budgets).length > 0) {
+            const budgetsArray = Object.values(data.budgets);
+            await BudgetModel.insertMany(budgetsArray);
+            console.log(`Migrated ${budgetsArray.length} budgets.`);
+          }
+          console.log("Migration complete.");
+
+          // Rename the file so we don't migrate again if we clear DB
+          fs.renameSync(DATA_FILE, `${DATA_FILE}.migrated`);
+        }
       }
     } catch (err) {
-      console.error("Failed to load data.json:", err);
+      console.error("Failed to migrate data.json to MongoDB:", err);
     }
   }
 
-  private saveData() {
-    try {
-      const data = {
-        users: Object.fromEntries(this.users),
-        expenses: Object.fromEntries(this.expenses),
-        budgets: Object.fromEntries(this.budgets)
-      };
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    } catch (err) {
-      console.error("Failed to save data.json:", err);
-    }
+  async isDataEmpty(): Promise<boolean> {
+    const userCount = await UserModel.countDocuments();
+    return userCount === 0;
   }
 
-  isDataEmpty(): boolean {
-    return this.users.size === 0 && this.expenses.size === 0 && this.budgets.size === 0;
+  private mapUser(doc: IUserDocument): User {
+    const obj = doc.toObject();
+    delete obj._id;
+    delete obj.__v;
+    return obj as User;
+  }
+
+  private mapExpense(doc: IExpenseDocument): Expense {
+    const obj = doc.toObject();
+    delete obj._id;
+    delete obj.__v;
+    return obj as Expense;
+  }
+
+  private mapBudget(doc: IBudgetDocument): Budget {
+    const obj = doc.toObject();
+    delete obj._id;
+    delete obj.__v;
+    return obj as Budget;
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const user = await UserModel.findOne({ id });
+    return user ? this.mapUser(user) : undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(u => u.username === username);
+    const user = await UserModel.findOne({ username });
+    return user ? this.mapUser(user) : undefined;
   }
 
   async createUser(insertUser: InsertUser & { currency?: string; currencySymbol?: string }, isAdmin = false): Promise<User> {
     const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id, 
-      avatar: null, 
+    const newUser = await UserModel.create({
+      ...insertUser,
+      id,
+      avatar: null,
       isAdmin,
       currency: insertUser.currency || "USD",
       currencySymbol: insertUser.currencySymbol || "$"
-    };
-    this.users.set(id, user);
-    this.saveData();
-    return user;
+    });
+    return this.mapUser(newUser);
   }
 
   async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated = { ...user, ...data };
-    this.users.set(id, updated);
-    this.saveData();
-    return updated;
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { id },
+      { $set: data },
+      { new: true }
+    );
+    return updatedUser ? this.mapUser(updatedUser) : undefined;
   }
 
   async getExpenses(userId: string): Promise<Expense[]> {
-    return Array.from(this.expenses.values())
-      .filter(e => e.userId === userId)
+    const expenses = await ExpenseModel.find({ userId });
+    return expenses
+      .map(e => this.mapExpense(e))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async getExpense(id: string): Promise<Expense | undefined> {
-    return this.expenses.get(id);
+    const expense = await ExpenseModel.findOne({ id });
+    return expense ? this.mapExpense(expense) : undefined;
   }
 
   async createExpense(userId: string, expense: InsertExpense): Promise<Expense> {
     const id = randomUUID();
-    const newExpense: Expense = {
+    const newExpense = await ExpenseModel.create({
       ...expense,
       id,
       userId,
       createdAt: new Date().toISOString(),
-    };
-    this.expenses.set(id, newExpense);
-    this.saveData();
-    return newExpense;
+    });
+    return this.mapExpense(newExpense);
   }
 
   async updateExpense(id: string, data: Partial<Expense>): Promise<Expense | undefined> {
-    const expense = this.expenses.get(id);
-    if (!expense) return undefined;
-    const updated = { ...expense, ...data };
-    this.expenses.set(id, updated);
-    this.saveData();
-    return updated;
+    const updatedExpense = await ExpenseModel.findOneAndUpdate(
+      { id },
+      { $set: data },
+      { new: true }
+    );
+    return updatedExpense ? this.mapExpense(updatedExpense) : undefined;
   }
 
   async deleteExpense(id: string): Promise<boolean> {
-    const deleted = this.expenses.delete(id);
-    if (deleted) this.saveData();
-    return deleted;
+    const result = await ExpenseModel.deleteOne({ id });
+    return result.deletedCount > 0;
   }
 
   async getBudget(userId: string, month: number, year: number): Promise<Budget | undefined> {
-    return Array.from(this.budgets.values()).find(
-      b => b.userId === userId && b.month === month && b.year === year
-    );
+    const budget = await BudgetModel.findOne({ userId, month, year });
+    return budget ? this.mapBudget(budget) : undefined;
   }
 
   async setBudget(userId: string, budget: InsertBudget): Promise<Budget> {
-    const existing = await this.getBudget(userId, budget.month, budget.year);
+    const existing = await BudgetModel.findOne({ userId, month: budget.month, year: budget.year });
     if (existing) {
-      const updated = { ...existing, amount: budget.amount };
-      this.budgets.set(existing.id, updated);
-      this.saveData();
-      return updated;
+      existing.amount = budget.amount;
+      await existing.save();
+      return this.mapBudget(existing);
     }
     const id = randomUUID();
-    const newBudget: Budget = { ...budget, id, userId };
-    this.budgets.set(id, newBudget);
-    this.saveData();
-    return newBudget;
+    const newBudget = await BudgetModel.create({ ...budget, id, userId });
+    return this.mapBudget(newBudget);
   }
 
   async getBudgets(userId: string): Promise<Budget[]> {
-    return Array.from(this.budgets.values()).filter(b => b.userId === userId);
+    const budgets = await BudgetModel.find({ userId });
+    return budgets.map(b => this.mapBudget(b));
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    const users = await UserModel.find({});
+    return users.map(u => this.mapUser(u));
   }
 
   async getAllExpenses(): Promise<Expense[]> {
-    return Array.from(this.expenses.values())
+    const expenses = await ExpenseModel.find({});
+    return expenses
+      .map(e => this.mapExpense(e))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new MongoStorage();

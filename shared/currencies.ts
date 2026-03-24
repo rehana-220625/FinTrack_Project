@@ -7,13 +7,6 @@ export const COUNTRIES = [
 ];
 
 export function getCurrencyByCountry(country: string) {
-  const map: Record<string, { code: string; symbol: string }> = {
-    "United States": { code: "USD", symbol: "$" },
-    "United Kingdom": { code: "GBP", symbol: "£" },
-    "India": { code: "INR", symbol: "₹" },
-    "Canada": { code: "CAD", symbol: "$" },
-    "Australia": { code: "AUD", symbol: "$" },
-  };
-
-  return map[country] || { code: "USD", symbol: "$" };
+  const c = COUNTRIES.find(c => c.name === country);
+  return c || { name: "United States", code: "USD", symbol: "$" };
 }
