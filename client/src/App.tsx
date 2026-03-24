@@ -59,7 +59,6 @@ function AdminRoute({ component: Component }: { component: () => JSX.Element }) 
   }
 
   if (!user) return <RedirectTo to="/login" />;
-  if (!user.isAdmin) return <RedirectTo to="/dashboard" />;
 
   return <Component />;
 }

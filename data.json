@@ -1,0 +1,282 @@
+{
+  "users": {
+    "811b2721-bf3c-45df-a7aa-e3eeda445c73": {
+      "username": "demo",
+      "password": "demo123",
+      "name": "Alex Johnson",
+      "email": "alex@fintrack.app",
+      "country": "United States",
+      "currency": "USD",
+      "currencySymbol": "$",
+      "id": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "avatar": null,
+      "isAdmin": true
+    },
+    "222c21d5-be35-4560-b6b7-f7a730d1242a": {
+      "username": "sarah",
+      "password": "sarah123",
+      "name": "Sarah Chen",
+      "email": "sarah@fintrack.app",
+      "country": "United Kingdom",
+      "currency": "GBP",
+      "currencySymbol": "£",
+      "id": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "avatar": null,
+      "isAdmin": false
+    },
+    "8d26061e-0628-4016-a9ed-66861a878a54": {
+      "username": "dharani",
+      "password": "dharu123",
+      "name": "dharani",
+      "email": "n221024@rguktn.ac.in",
+      "country": "India",
+      "currency": "INR",
+      "currencySymbol": "₹",
+      "id": "8d26061e-0628-4016-a9ed-66861a878a54",
+      "avatar": null,
+      "isAdmin": false
+    },
+    "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda": {
+      "username": "dharu",
+      "password": "dharu123",
+      "name": "dharani",
+      "email": "lakshmidharani61@gmail.com",
+      "country": "United States",
+      "currency": "USD",
+      "currencySymbol": "$",
+      "id": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
+      "avatar": null,
+      "isAdmin": false
+    }
+  },
+  "expenses": {
+    "b075fbbf-d9ed-42d0-944e-cdc65af2f504": {
+      "amount": 85.5,
+      "category": "Food & Dining",
+      "description": "Grocery shopping at Whole Foods",
+      "date": "2026-03-10",
+      "id": "b075fbbf-d9ed-42d0-944e-cdc65af2f504",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.851Z"
+    },
+    "d2ed3ec7-a587-44d1-9da5-1e8da66e5c1e": {
+      "amount": 45,
+      "category": "Transportation",
+      "description": "Monthly bus pass",
+      "date": "2026-03-08",
+      "id": "d2ed3ec7-a587-44d1-9da5-1e8da66e5c1e",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.853Z"
+    },
+    "7d2ba2a7-f89f-4c1c-9860-844fae4e3bfb": {
+      "amount": 299.99,
+      "category": "Shopping",
+      "description": "New running shoes",
+      "date": "2026-03-07",
+      "id": "7d2ba2a7-f89f-4c1c-9860-844fae4e3bfb",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.854Z"
+    },
+    "fe3862a7-06ba-4727-8d9b-92ab9dcd725f": {
+      "amount": 15.99,
+      "category": "Entertainment",
+      "description": "Netflix subscription",
+      "date": "2026-03-06",
+      "id": "fe3862a7-06ba-4727-8d9b-92ab9dcd725f",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.855Z"
+    },
+    "f87acd65-1a9e-4c5d-b118-3ad3f0416a4e": {
+      "amount": 120,
+      "category": "Health & Fitness",
+      "description": "Gym membership",
+      "date": "2026-03-05",
+      "id": "f87acd65-1a9e-4c5d-b118-3ad3f0416a4e",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.856Z"
+    },
+    "693a5b5f-d16b-4408-9487-ffebb28bab1e": {
+      "amount": 52.3,
+      "category": "Food & Dining",
+      "description": "Dinner at Italian bistro",
+      "date": "2026-03-04",
+      "id": "693a5b5f-d16b-4408-9487-ffebb28bab1e",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.856Z"
+    },
+    "7fcfe923-a729-4879-ba51-646f2fee60e3": {
+      "amount": 89,
+      "category": "Bills & Utilities",
+      "description": "Electricity bill",
+      "date": "2026-03-03",
+      "id": "7fcfe923-a729-4879-ba51-646f2fee60e3",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.857Z"
+    },
+    "e8a7b2e0-6786-4e4f-b852-518aa0ac0dae": {
+      "amount": 200,
+      "category": "Travel",
+      "description": "Flight to NYC",
+      "date": "2026-03-01",
+      "id": "e8a7b2e0-6786-4e4f-b852-518aa0ac0dae",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.858Z"
+    },
+    "df137bde-433d-4196-86b5-3c50b4dfda5e": {
+      "amount": 35,
+      "category": "Education",
+      "description": "Udemy course",
+      "date": "2026-02-28",
+      "id": "df137bde-433d-4196-86b5-3c50b4dfda5e",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.859Z"
+    },
+    "772580a9-2e37-459b-9689-565793e1c826": {
+      "amount": 67.8,
+      "category": "Food & Dining",
+      "description": "Coffee & lunch meetings",
+      "date": "2026-02-25",
+      "id": "772580a9-2e37-459b-9689-565793e1c826",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.860Z"
+    },
+    "bf5441e1-f2e8-4fc5-a65b-47bcce5b4c63": {
+      "amount": 180,
+      "category": "Shopping",
+      "description": "Home decor",
+      "date": "2026-02-22",
+      "id": "bf5441e1-f2e8-4fc5-a65b-47bcce5b4c63",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.861Z"
+    },
+    "03af8746-92d2-4785-9042-2864b8f5ba09": {
+      "amount": 55,
+      "category": "Transportation",
+      "description": "Uber rides",
+      "date": "2026-02-20",
+      "id": "03af8746-92d2-4785-9042-2864b8f5ba09",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.862Z"
+    },
+    "edee27b8-cf41-46a4-8247-025990e05fc4": {
+      "amount": 25,
+      "category": "Entertainment",
+      "description": "Movie tickets",
+      "date": "2026-02-18",
+      "id": "edee27b8-cf41-46a4-8247-025990e05fc4",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.865Z"
+    },
+    "7f1ae5c7-1343-4e98-be62-cca52ffb5dba": {
+      "amount": 145,
+      "category": "Bills & Utilities",
+      "description": "Internet & phone bill",
+      "date": "2026-02-15",
+      "id": "7f1ae5c7-1343-4e98-be62-cca52ffb5dba",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.866Z"
+    },
+    "c878f38b-1a85-43ea-a5b6-adc9d2a10cfe": {
+      "amount": 78.4,
+      "category": "Food & Dining",
+      "description": "Weekend brunch",
+      "date": "2026-02-10",
+      "id": "c878f38b-1a85-43ea-a5b6-adc9d2a10cfe",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73",
+      "createdAt": "2026-03-15T17:36:07.867Z"
+    },
+    "ce920174-7e3a-4691-b244-8d6aabff2815": {
+      "amount": 120,
+      "category": "Food & Dining",
+      "description": "Weekly groceries",
+      "date": "2026-03-11",
+      "id": "ce920174-7e3a-4691-b244-8d6aabff2815",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "createdAt": "2026-03-15T17:36:07.871Z"
+    },
+    "50cb39b1-98fc-4a7f-9e5e-6e3b1132d207": {
+      "amount": 75,
+      "category": "Transportation",
+      "description": "Taxi rides this week",
+      "date": "2026-03-09",
+      "id": "50cb39b1-98fc-4a7f-9e5e-6e3b1132d207",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "createdAt": "2026-03-15T17:36:07.872Z"
+    },
+    "eb480d8c-bf47-402e-a64b-903c6818b39e": {
+      "amount": 450,
+      "category": "Shopping",
+      "description": "Laptop accessories",
+      "date": "2026-03-06",
+      "id": "eb480d8c-bf47-402e-a64b-903c6818b39e",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "createdAt": "2026-03-15T17:36:07.872Z"
+    },
+    "d32194a1-dc79-4d75-941a-9eae30f426f7": {
+      "amount": 12.99,
+      "category": "Entertainment",
+      "description": "Spotify Premium",
+      "date": "2026-03-05",
+      "id": "d32194a1-dc79-4d75-941a-9eae30f426f7",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "createdAt": "2026-03-15T17:36:07.873Z"
+    },
+    "df407c12-925d-4efa-92e8-71f9374de243": {
+      "amount": 95,
+      "category": "Bills & Utilities",
+      "description": "Water & gas bill",
+      "date": "2026-03-03",
+      "id": "df407c12-925d-4efa-92e8-71f9374de243",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a",
+      "createdAt": "2026-03-15T17:36:07.874Z"
+    },
+    "75fdf4c4-12bc-456b-8222-d4f72f49f847": {
+      "amount": 50,
+      "category": "Food & Dining",
+      "description": "chicken",
+      "date": "2026-03-16",
+      "id": "75fdf4c4-12bc-456b-8222-d4f72f49f847",
+      "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
+      "createdAt": "2026-03-16T11:29:12.377Z"
+    },
+    "537dac9b-8a26-4c18-84eb-bda54a09b0a5": {
+      "amount": 100,
+      "category": "Shopping",
+      "description": "clothes",
+      "date": "2026-03-16",
+      "id": "537dac9b-8a26-4c18-84eb-bda54a09b0a5",
+      "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda",
+      "createdAt": "2026-03-16T11:29:33.484Z"
+    }
+  },
+  "budgets": {
+    "75110b93-2d31-439a-82b4-4d65930720a1": {
+      "month": 3,
+      "year": 2026,
+      "amount": 2000,
+      "id": "75110b93-2d31-439a-82b4-4d65930720a1",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73"
+    },
+    "1cb9b9f4-edf5-4d62-849b-a7fc77150360": {
+      "month": 2,
+      "year": 2026,
+      "amount": 1800,
+      "id": "1cb9b9f4-edf5-4d62-849b-a7fc77150360",
+      "userId": "811b2721-bf3c-45df-a7aa-e3eeda445c73"
+    },
+    "ff851026-1552-4a93-9dcf-fbda19f2b793": {
+      "month": 3,
+      "year": 2026,
+      "amount": 1500,
+      "id": "ff851026-1552-4a93-9dcf-fbda19f2b793",
+      "userId": "222c21d5-be35-4560-b6b7-f7a730d1242a"
+    },
+    "e6b073cc-2f25-4943-8feb-3bcdedb1f22b": {
+      "month": 3,
+      "year": 2026,
+      "amount": 1000,
+      "id": "e6b073cc-2f25-4943-8feb-3bcdedb1f22b",
+      "userId": "0ef3a498-4bce-4b0f-a1f5-1b1b17ec6fda"
+    }
+  }
+}

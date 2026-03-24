@@ -9,6 +9,55 @@ import {
 } from "@shared/schema";
 import { getCurrencyByCountry } from "@shared/currencies";
 import session from "express-session";
+import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
+
+const SESSION_FILE = path.join(process.cwd(), "sessions.json");
+
+class FileStore extends session.Store {
+  private sessions: Record<string, any> = {};
+
+  constructor() {
+    super();
+    try {
+      if (fs.existsSync(SESSION_FILE)) {
+        this.sessions = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
+      }
+    } catch (err) {
+      console.error("Failed to load sessions.json:", err);
+    }
+  }
+
+  private saveSessions() {
+    try {
+      fs.writeFileSync(SESSION_FILE, JSON.stringify(this.sessions, null, 2));
+    } catch (err) {
+      console.error("Failed to save sessions.json:", err);
+    }
+  }
+
+  get(sid: string, callback: (err: any, session?: session.SessionData | null) => void) {
+    const sess = this.sessions[sid];
+    if (sess) {
+      callback(null, sess);
+    } else {
+      callback(null, null);
+    }
+  }
+
+  set(sid: string, sess: session.SessionData, callback?: (err?: any) => void) {
+    this.sessions[sid] = sess;
+    this.saveSessions();
+    if (callback) callback();
+  }
+
+  destroy(sid: string, callback?: (err?: any) => void) {
+    delete this.sessions[sid];
+    this.saveSessions();
+    if (callback) callback();
+  }
+}
 
 declare module "express-session" {
   interface SessionData {
@@ -38,27 +87,18 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
   next();
 }
 
-// ================= MAIN FUNCTION =================
-
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   app.set("trust proxy", 1);
-
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "fintrack-secret-2024",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
-    })
-  );
-
-  // ================= AUTH =================
+  app.use(session({
+    store: new FileStore(),
+    secret: process.env.SESSION_SECRET || "fintrack-secret-2024",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }));
 
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -161,19 +201,30 @@ export async function registerRoutes(
   app.post("/api/expenses", requireAuth, async (req, res) => {
     try {
       const result = insertExpenseSchema.safeParse(req.body);
+      if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
+      const expense = await storage.createExpense(req.session.userId!, result.data);
 
-      if (!result.success) {
-        return res
-          .status(400)
-          .json({ error: result.error.issues[0].message });
+      let budgetExceeded = false;
+      let monthTotal = 0;
+      let budgetAmount = 0;
+      
+      const now = new Date(expense.date);
+      const budget = await storage.getBudget(req.session.userId!, now.getMonth() + 1, now.getFullYear());
+      
+      if (budget && budget.amount > 0) {
+        const expenses = await storage.getExpenses(req.session.userId!);
+        monthTotal = expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getMonth() + 1 === now.getMonth() + 1 && d.getFullYear() === now.getFullYear();
+        }).reduce((s, e) => s + e.amount, 0);
+
+        if (monthTotal > budget.amount) {
+          budgetExceeded = true;
+          budgetAmount = budget.amount;
+        }
       }
 
-      const expense = await storage.createExpense(
-        req.session.userId!,
-        result.data
-      );
-
-      return res.json(expense);
+      return res.json({ ...expense, budgetExceeded, budgetAmount, monthTotal });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
@@ -206,6 +257,127 @@ export async function registerRoutes(
       return res.status(500).json({ error: e.message });
     }
   });
+
+  // Admin routes
+  app.get("/api/admin/stats", requireAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const expenses = await storage.getAllExpenses();
+      const totalRevenue = expenses.reduce((s, e) => s + e.amount, 0);
+      const now = new Date();
+      const thisMonth = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() + 1 === now.getMonth() + 1 && d.getFullYear() === now.getFullYear();
+      });
+      const thisMonthTotal = thisMonth.reduce((s, e) => s + e.amount, 0);
+
+      const categoryBreakdown = expenses.reduce((acc: Record<string, number>, e) => {
+        acc[e.category] = (acc[e.category] || 0) + e.amount;
+        return acc;
+      }, {});
+
+      return res.json({
+        totalUsers: users.length,
+        totalExpenses: expenses.length,
+        totalAmount: totalRevenue,
+        thisMonthAmount: thisMonthTotal,
+        categoryBreakdown,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/users", requireAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const expenses = await storage.getAllExpenses();
+      const result = users.map(u => {
+        const { password: _, ...safeUser } = u;
+        const userExpenses = expenses.filter(e => e.userId === u.id);
+        return {
+          ...safeUser,
+          expenseCount: userExpenses.length,
+          totalSpent: userExpenses.reduce((s, e) => s + e.amount, 0),
+        };
+      });
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/admin/expenses", requireAuth, async (req, res) => {
+    try {
+      const expenses = await storage.getAllExpenses();
+      const users = await storage.getAllUsers();
+      const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
+      const result = expenses.map(e => ({ ...e, userName: userMap[e.userId] || "Unknown" }));
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Seed demo user on first startup
+  if (storage.isDataEmpty()) {
+    const demoUser = await storage.getUserByUsername("demo");
+    if (!demoUser) {
+    const user = await storage.createUser({
+      username: "demo",
+      password: "demo123",
+      name: "Alex Johnson",
+      email: "alex@fintrack.app",
+      country: "United States",
+      currency: "USD",
+      currencySymbol: "$",
+    }, true); // isAdmin = true
+    const expenses = [
+      { amount: 85.50, category: "Food & Dining", description: "Grocery shopping at Whole Foods", date: "2026-03-10" },
+      { amount: 45.00, category: "Transportation", description: "Monthly bus pass", date: "2026-03-08" },
+      { amount: 299.99, category: "Shopping", description: "New running shoes", date: "2026-03-07" },
+      { amount: 15.99, category: "Entertainment", description: "Netflix subscription", date: "2026-03-06" },
+      { amount: 120.00, category: "Health & Fitness", description: "Gym membership", date: "2026-03-05" },
+      { amount: 52.30, category: "Food & Dining", description: "Dinner at Italian bistro", date: "2026-03-04" },
+      { amount: 89.00, category: "Bills & Utilities", description: "Electricity bill", date: "2026-03-03" },
+      { amount: 200.00, category: "Travel", description: "Flight to NYC", date: "2026-03-01" },
+      { amount: 35.00, category: "Education", description: "Udemy course", date: "2026-02-28" },
+      { amount: 67.80, category: "Food & Dining", description: "Coffee & lunch meetings", date: "2026-02-25" },
+      { amount: 180.00, category: "Shopping", description: "Home decor", date: "2026-02-22" },
+      { amount: 55.00, category: "Transportation", description: "Uber rides", date: "2026-02-20" },
+      { amount: 25.00, category: "Entertainment", description: "Movie tickets", date: "2026-02-18" },
+      { amount: 145.00, category: "Bills & Utilities", description: "Internet & phone bill", date: "2026-02-15" },
+      { amount: 78.40, category: "Food & Dining", description: "Weekend brunch", date: "2026-02-10" },
+    ];
+    for (const exp of expenses) {
+      await storage.createExpense(user.id, exp);
+    }
+    await storage.setBudget(user.id, { month: 3, year: 2026, amount: 2000 });
+    await storage.setBudget(user.id, { month: 2, year: 2026, amount: 1800 });
+
+    // Seed a second regular user for admin demo
+    const user2 = await storage.createUser({
+      username: "sarah",
+      password: "sarah123",
+      name: "Sarah Chen",
+      email: "sarah@fintrack.app",
+      country: "United Kingdom",
+      currency: "GBP",
+      currencySymbol: "£",
+    });
+    const expenses2 = [
+      { amount: 120.00, category: "Food & Dining", description: "Weekly groceries", date: "2026-03-11" },
+      { amount: 75.00, category: "Transportation", description: "Taxi rides this week", date: "2026-03-09" },
+      { amount: 450.00, category: "Shopping", description: "Laptop accessories", date: "2026-03-06" },
+      { amount: 12.99, category: "Entertainment", description: "Spotify Premium", date: "2026-03-05" },
+      { amount: 95.00, category: "Bills & Utilities", description: "Water & gas bill", date: "2026-03-03" },
+    ];
+    for (const exp of expenses2) {
+      await storage.createExpense(user2.id, exp);
+    }
+    await storage.setBudget(user2.id, { month: 3, year: 2026, amount: 1500 });
+    }
+  }
 
   return httpServer;
 }
