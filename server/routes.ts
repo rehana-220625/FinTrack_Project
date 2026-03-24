@@ -229,11 +229,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(500).json({ error: e.message });
     }
   });
-
-<<<<<<< HEAD
-  // ================= BUDGET =================
-
-=======
+  
   app.patch("/api/expenses/:id", requireAuth, async (req, res) => {
     try {
       const expense = await storage.getExpense(req.params.id as string);
@@ -260,8 +256,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Budget routes
->>>>>>> origin/dharani
+  // Budget routes origin/dharani
   app.get("/api/budgets", requireAuth, async (req, res) => {
     const budgets = await storage.getBudgets(req.session.userId!);
     return res.json(budgets);
