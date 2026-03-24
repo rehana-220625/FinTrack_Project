@@ -10,6 +10,7 @@ import { Layout } from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import type { Expense, Budget } from "@shared/schema";
 
+
 const CATEGORY_ICONS: Record<string, any> = {
   "Food & Dining": Coffee,
   "Transportation": Car,
@@ -33,6 +34,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Education": "#6366f1",
   "Other": "#94a3b8",
 };
+
 
 function StatCard({ title, value, subtitle, icon: Icon, gradient, change, testId }: any) {
   return (
