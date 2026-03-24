@@ -5,7 +5,7 @@ export const COUNTRIES = [
   { name: "Canada", code: "CAD", symbol: "$" },
   { name: "Australia", code: "AUD", symbol: "$" }
 ];
-     
+      
 export function getCurrencyByCountry(country: string) {
   const c = COUNTRIES.find(c => c.name === country);
   return c || { name: "United States", code: "USD", symbol: "$" };
