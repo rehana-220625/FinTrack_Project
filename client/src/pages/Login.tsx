@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Zap, ArrowRight, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Wallet, ArrowRight, AlertCircle } from "lucide-react";
 import { login } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,9 +51,9 @@ export default function Login() {
           <Link href="/">
             <div className="inline-flex items-center gap-2 cursor-pointer mb-6">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg">
-                <Zap size={20} className="text-white" />
+                <Wallet size={20} className="text-white" />
               </div>
-              <span className="font-bold text-xl text-foreground">FinTrack</span>
+              <span className="font-bold text-xl text-foreground">walletWatch</span>
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-foreground mb-2">Welcome back</h1>

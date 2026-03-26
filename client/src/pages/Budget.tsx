@@ -6,6 +6,7 @@ import { Layout } from "@/components/Layout";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Budget, Expense } from "@shared/schema";
+import { Sparkles, BrainCircuit } from "lucide-react";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -22,7 +23,7 @@ export default function BudgetPage() {
   const sym = user?.currencySymbol || "$";
 
   const setBudgetMutation = useMutation({
-    mutationFn: (data: { month: number; year: number; amount: number }) =>
+    mutationFn: (data: { month: number; year: number; amount: number; categories?: string }) =>
       apiRequest("POST", "/api/budgets", data).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
@@ -32,6 +33,39 @@ export default function BudgetPage() {
     },
     onError: () => toast({ title: "Error", description: "Failed to save budget.", variant: "destructive" }),
   });
+
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [incomeInput, setIncomeInput] = useState("");
+  const [generatedCategories, setGeneratedCategories] = useState<Record<string, number> | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateAI = async () => {
+    if (!incomeInput) return;
+    setIsGenerating(true);
+    try {
+      const res = await apiRequest("POST", "/api/budgets/generate", { income: Number(incomeInput) });
+      const data = await res.json();
+      if (data.categories) {
+        setGeneratedCategories(JSON.parse(data.categories));
+        setBudgetInput(data.amount.toString());
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to generate AI budget", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveAIBudget = () => {
+    if (!editingMonth || !budgetInput) return;
+    setBudgetMutation.mutate({
+      ...editingMonth,
+      amount: parseFloat(budgetInput),
+      categories: generatedCategories ? JSON.stringify(generatedCategories) : undefined
+    });
+    setGeneratedCategories(null);
+    setShowAIGenerator(false);
+  };
 
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -60,6 +94,8 @@ export default function BudgetPage() {
     if (isNaN(amount) || amount <= 0) return;
     setBudgetMutation.mutate({ ...editingMonth, amount });
   };
+  
+  const currentCategories = currentBudget?.categories ? JSON.parse(currentBudget.categories) : null;
 
   return (
     <Layout>
@@ -109,17 +145,30 @@ export default function BudgetPage() {
               </div>
             </div>
 
-            <button
-              data-testid="button-edit-current-budget"
-              onClick={() => {
-                setEditingMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
-                setBudgetInput(currentBudgetAmount ? currentBudgetAmount.toString() : "");
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-foreground hover:bg-white/15 transition-all text-sm font-medium"
-            >
-              <Edit3 size={15} />
-              {currentBudgetAmount > 0 ? "Edit Budget" : "Set Budget"}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                data-testid="button-edit-current-budget"
+                onClick={() => {
+                  setEditingMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+                  setBudgetInput(currentBudgetAmount ? currentBudgetAmount.toString() : "");
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-foreground hover:bg-white/15 transition-all text-sm font-medium w-full"
+              >
+                <Edit3 size={15} />
+                {currentBudgetAmount > 0 ? "Edit Budget" : "Set Budget"}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+                  setShowAIGenerator(true);
+                  setGeneratedCategories(null);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 border border-blue-500 text-white hover:opacity-90 transition-all text-sm font-semibold shadow-lg shadow-blue-500/20 w-full"
+              >
+                <Sparkles size={15} />
+                AI Generator
+              </button>
+            </div>
           </div>
 
           {/* Progress bar */}
@@ -150,61 +199,187 @@ export default function BudgetPage() {
                   }`}
                 />
               </div>
+              
+              {currentCategories && Object.keys(currentCategories).length > 0 && (
+                <div className="mt-6 pt-5 border-t border-white/10">
+                  <h4 className="text-sm font-medium mb-4 text-white/90 flex items-center gap-2">
+                    <BrainCircuit size={16} className="text-blue-400" />
+                    AI Recommended Allocation
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {Object.entries(currentCategories).map(([cat, amt]) => {
+                      const amount = Number(amt);
+                      const catPct = (amount / currentBudgetAmount) * 100;
+                      return (
+                        <div key={cat} className="bg-black/20 rounded-xl p-3">
+                          <div className="flex justify-between items-end mb-2">
+                            <span className="text-xs font-semibold text-white/80">{cat}</span>
+                            <span className="text-sm font-bold">{sym}{amount.toFixed(2)}</span>
+                          </div>
+                          <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${catPct}%` }}
+                              transition={{ duration: 1, delay: 0.5 }}
+                              className="h-full bg-blue-400 rounded-full"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </motion.div>
 
-        {/* Edit budget modal */}
+        {/* Edit / AI generator budget modal */}
         <AnimatePresence>
           {editingMonth && (
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.97 }}
-              className="bg-card border border-card-border rounded-2xl p-6 shadow-xl"
+              className={`bg-card border border-card-border rounded-2xl p-6 shadow-xl relative overflow-hidden ${showAIGenerator ? 'border-blue-500/30' : ''}`}
             >
-              <h3 className="font-semibold text-foreground mb-1">
-                Set Budget for {MONTH_NAMES[editingMonth.month - 1]} {editingMonth.year}
+              {showAIGenerator && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+              )}
+              
+              <h3 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+                {showAIGenerator ? <><Sparkles size={18} className="text-blue-500"/> Smart AI Budget Generator</> : `Set Budget for ${MONTH_NAMES[editingMonth.month - 1]} ${editingMonth.year}`}
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">Enter your spending limit for this month</p>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
-                  <input
-                    data-testid="input-budget-amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={budgetInput}
-                    onChange={e => setBudgetInput(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    onKeyDown={e => e.key === "Enter" && handleSaveBudget()}
-                    autoFocus
-                  />
+              <p className="text-sm text-muted-foreground mb-4">
+                {showAIGenerator 
+                  ? "Enter your expected monthly income and let our AI analyze your habits to create the perfect budget allocation."
+                  : "Enter your spending limit for this month"}
+              </p>
+              
+              {showAIGenerator && !generatedCategories ? (
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                    <input
+                      type="number"
+                      value={incomeInput}
+                      onChange={e => setIncomeInput(e.target.value)}
+                      placeholder="Monthly Income (e.g. 5000)"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground text-sm outline-none focus:border-blue-500 transition-all font-medium"
+                      onKeyDown={e => e.key === "Enter" && handleGenerateAI()}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAIGenerator(false); setEditingMonth(null); }}
+                    className="px-4 py-2.5 rounded-xl border border-input text-muted-foreground text-sm hover:bg-accent transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleGenerateAI}
+                    disabled={isGenerating || !incomeInput}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold transition-all disabled:opacity-50 hover:bg-blue-700"
+                  >
+                    {isGenerating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <BrainCircuit size={16} />}
+                    Generate
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingMonth(null)}
-                  className="px-4 py-2.5 rounded-xl border border-input text-muted-foreground text-sm hover:bg-accent transition-all"
-                >
-                  Cancel
-                </button>
-                <motion.button
-                  data-testid="button-save-budget"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSaveBudget}
-                  disabled={setBudgetMutation.isPending}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-70"
-                >
-                  {setBudgetMutation.isPending ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <><Save size={16} /> Save Budget</>
-                  )}
-                </motion.button>
-              </div>
+              ) : showAIGenerator && generatedCategories ? (
+                <div className="space-y-5">
+                  <div className="bg-accent/40 rounded-xl p-4 border border-border">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-semibold text-foreground">AI Recommended Budget</span>
+                      <span className="text-lg font-bold text-blue-500">{sym}{parseFloat(budgetInput).toFixed(2)}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {Object.entries(generatedCategories).map(([cat, amt]) => {
+                        const amount = Number(amt);
+                        const pct = (amount / parseFloat(budgetInput)) * 100;
+                        return (
+                          <div key={cat}>
+                            <div className="flex justify-between items-center mb-1 text-xs font-medium">
+                              <span className="text-muted-foreground">{cat}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-foreground">{sym}{amount.toFixed(2)}</span>
+                                <span className="text-muted-foreground w-8 text-right">{pct.toFixed(0)}%</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-muted rounded-full">
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <div className="relative flex-1">
+                      <p className="text-xs text-muted-foreground absolute -top-5 left-1">Adjust Total (Optional)</p>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                      <input
+                        type="number"
+                        value={budgetInput}
+                        onChange={e => setBudgetInput(e.target.value)}
+                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-input bg-background font-bold outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedCategories(null)}
+                      className="px-4 py-2.5 rounded-xl border border-input text-muted-foreground text-sm hover:bg-accent"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleSaveAIBudget}
+                      disabled={setBudgetMutation.isPending}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold"
+                    >
+                      {setBudgetMutation.isPending ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Apply Budget"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                    <input
+                      data-testid="input-budget-amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={budgetInput}
+                      onChange={e => setBudgetInput(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      onKeyDown={e => e.key === "Enter" && handleSaveBudget()}
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingMonth(null); setShowAIGenerator(false); }}
+                    className="px-4 py-2.5 rounded-xl border border-input text-muted-foreground text-sm hover:bg-accent transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    data-testid="button-save-budget"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleSaveBudget}
+                    disabled={setBudgetMutation.isPending}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-70"
+                  >
+                    {setBudgetMutation.isPending ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <><Save size={16} /> Save Budget</>
+                    )}
+                  </motion.button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

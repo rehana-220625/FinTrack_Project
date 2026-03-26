@@ -97,7 +97,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "fintrack-expenses.csv";
+    a.download = "walletwatch-expenses.csv";
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: "CSV exported!", description: "Your expense data has been downloaded." });
@@ -118,7 +118,7 @@ export default function Reports() {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.text("FinTrack - Expense Report", 14, 18);
+      doc.text("walletWatch - Expense Report", 14, 18);
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, 14, 28);
@@ -201,14 +201,14 @@ export default function Reports() {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(
-          `FinTrack Report • Page ${i} of ${pageCount}`,
+          `walletWatch Report • Page ${i} of ${pageCount}`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 8,
           { align: "center" }
         );
       }
 
-      doc.save("fintrack-report.pdf");
+      doc.save("walletwatch-report.pdf");
       toast({ title: "PDF exported!", description: "Your report has been downloaded." });
     } catch (err) {
       toast({ title: "Export failed", description: "Could not generate PDF.", variant: "destructive" });

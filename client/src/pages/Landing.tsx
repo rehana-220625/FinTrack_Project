@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, useInView, useAnimation } from "framer-motion";
 import {
-  Zap, TrendingUp, Shield, PieChart, BarChart3, Smartphone,
+  Wallet, TrendingUp, Shield, PieChart, BarChart3, Smartphone,
   ArrowRight, Star, CheckCircle, Twitter, Github, Linkedin, Globe
 } from "lucide-react";
 import { ParticleBackground } from "@/components/ParticleBackground";
@@ -67,7 +67,7 @@ const features = [
     gradient: "from-pink-500 to-rose-500",
   },
   {
-    icon: Zap,
+    icon: Wallet,
     title: "Real-time Updates",
     description: "Instant updates as you add expenses with live balance calculations.",
     gradient: "from-indigo-500 to-blue-500",
@@ -85,7 +85,7 @@ const testimonials = [
   {
     name: "Sarah Chen",
     role: "Freelance Designer",
-    text: "FinTrack transformed how I manage my finances. The visualizations are stunning and the insights are incredibly helpful.",
+    text: "walletWatch transformed how I manage my finances. The visualizations are stunning and the insights are incredibly helpful.",
     rating: 5,
     avatar: "SC",
     gradient: "from-blue-500 to-cyan-500",
@@ -120,9 +120,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg">
-              <Zap size={16} className="text-white" />
+              <Wallet size={16} className="text-white" />
             </div>
-            <span className="font-bold text-lg text-foreground">FinTrack</span>
+            <span className="font-bold text-lg text-foreground">walletWatch</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -407,9 +407,9 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-                <Zap size={14} className="text-white" />
+                <Wallet size={14} className="text-white" />
               </div>
-              <span className="font-bold text-foreground">FinTrack</span>
+              <span className="font-bold text-foreground">walletWatch</span>
               <span className="text-muted-foreground text-sm ml-2">© 2026 All rights reserved</span>
             </div>
             <div className="flex items-center gap-6">

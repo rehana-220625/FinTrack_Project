@@ -72,24 +72,11 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
-async function requireAdmin(req: Request, res: Response, next: Function) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const user = await storage.getUser(req.session.userId);
-  if (!user?.isAdmin) {
-    return res.status(403).json({ error: "Forbidden: Admin only" });
-  }
-
-  next();
-}
-
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   app.set("trust proxy", 1);
   app.use(session({
     store: new FileStore(),
-    secret: process.env.SESSION_SECRET || "fintrack-secret-2024",
+    secret: process.env.SESSION_SECRET || "walletwatch-secret-2024",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -257,6 +244,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return res.json(budgets);
   });
 
+  app.get("/api/budgets/current", requireAuth, async (req, res) => {
+    try {
+      const now = new Date();
+      const budget = await storage.getBudget(
+        req.session.userId!,
+        now.getMonth() + 1,
+        now.getFullYear()
+      );
+      return res.json(budget || null);
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post("/api/budgets", requireAuth, async (req, res) => {
     try {
       const result = insertBudgetSchema.safeParse(req.body);
@@ -278,61 +279,186 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/admin/stats", requireAuth, async (req, res) => {
+  app.post("/api/budgets/generate", requireAuth, async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
-      const expenses = await storage.getAllExpenses();
-      const totalRevenue = expenses.reduce((s, e) => s + e.amount, 0);
-      const now = new Date();
-      const thisMonth = expenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() + 1 === now.getMonth() + 1 && d.getFullYear() === now.getFullYear();
-      });
-      const thisMonthTotal = thisMonth.reduce((s, e) => s + e.amount, 0);
+      const { income } = req.body;
+      if (!income || isNaN(Number(income))) {
+        return res.status(400).json({ error: "Valid monthly income is required" });
+      }
+      
+      const incomeNum = Number(income);
+      
+      // Smart AI heuristic based on actual user history
+      const expenses = await storage.getExpenses(req.session.userId!);
+      let categories: Record<string, number> = {};
 
-      const categoryBreakdown = expenses.reduce((acc: Record<string, number>, e) => {
+      if (expenses.length > 0) {
+        // Calculate historical category proportions
+        const categoryTotals = expenses.reduce((acc: Record<string, number>, e) => {
+          acc[e.category] = (acc[e.category] || 0) + e.amount;
+          return acc;
+        }, {});
+        
+        const totalHistoricalSpend = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+        
+        // Map historical proportions to the new income
+        let remainingIncome = incomeNum;
+        
+        // Strongly recommend 20% minimum savings rule before allocating the rest
+        const savingsTarget = Math.round(incomeNum * 0.20);
+        categories["Savings"] = savingsTarget;
+        remainingIncome -= savingsTarget;
+
+        for (const [cat, amount] of Object.entries(categoryTotals)) {
+          if (cat === "Savings") continue;
+          
+          const proportion = amount / totalHistoricalSpend;
+          const allocated = Math.round(remainingIncome * proportion);
+          categories[cat] = allocated;
+        }
+      } else {
+        // Fallback to strict standard guidelines if no history exists
+        categories = {
+          "Housing": Math.round(incomeNum * 0.35),
+          "Food & Dining": Math.round(incomeNum * 0.15),
+          "Savings": Math.round(incomeNum * 0.20),
+          "Transportation": Math.round(incomeNum * 0.10),
+          "Shopping": Math.round(incomeNum * 0.10),
+          "Entertainment": Math.round(incomeNum * 0.10),
+        };
+      }
+      
+      const totalAmount = Object.values(categories).reduce((a, b) => a + b, 0);
+
+      return res.json({
+        amount: totalAmount,
+        categories: JSON.stringify(categories)
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/chat", requireAuth, async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ error: "Message is required" });
+
+      const expenses = await storage.getExpenses(req.session.userId!);
+      const now = new Date();
+      const currentMonthExpenses = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+
+      const totalSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Calculate category spending
+      const categoryTotals = currentMonthExpenses.reduce((acc: any, e) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
         return acc;
       }, {});
+      
+      const highestCategory = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a])[0] || "None";
+      const highestAmount = categoryTotals[highestCategory] || 0;
+      const highestPercentage = totalSpent > 0 ? Math.round((highestAmount / totalSpent) * 100) : 0;
 
-      return res.json({
-        totalUsers: users.length,
-        totalExpenses: expenses.length,
-        totalAmount: totalRevenue,
-        thisMonthAmount: thisMonthTotal,
-        categoryBreakdown,
-      });
+      const lowerMessage = message.toLowerCase();
+      let response = "I am an AI financial assistant. While I am still learning, I can provide insights on your total spending, budget status, category breakdowns, and advice on how to save. What would you like to know?";
+
+      const budget = await storage.getBudget(req.session.userId!, now.getMonth() + 1, now.getFullYear());
+      const budgetAmount = budget?.amount || 0;
+      
+      const greetings = ["hi", "hello", "hey", "greetings", "morning", "afternoon"];
+      if (greetings.some(g => lowerMessage === g || lowerMessage.startsWith(g + " "))) {
+        response = "Hello! I am your professional AI Financial Advisor. How may I assist you with your financial goals today?";
+      } else if (lowerMessage.includes("budget")) {
+        if (budgetAmount > 0) {
+          const remaining = budgetAmount - totalSpent;
+          response = `Your current monthly budget is set to $${budgetAmount}. You have spent $${totalSpent} so far, leaving you with $${remaining} for the rest of the month.`;
+        } else {
+          response = "You currently do not have a budget set for this month. I recommend using our AI Budget Generator on the Budgets page to create one based on your income!";
+        }
+      } else if (lowerMessage.includes("save") || lowerMessage.includes("reduce") || lowerMessage.includes("advice") || lowerMessage.includes("help")) {
+        if (highestPercentage > 30) {
+          const savingsAmount = Math.round(highestAmount * 0.15);
+          response = `Based on my analysis, you spent ${highestPercentage}% of your money on ${highestCategory} this month. A professional recommendation is to reduce discretionary spending in this area by 15% to increase your savings by $${savingsAmount}.`;
+        } else {
+          response = "To optimize your savings, I recommend the 50/30/20 rule: 50% for needs, 30% for wants, and 20% strictly for savings. Try reviewing your subscriptions and dining expenses to find quick wins.";
+        }
+      } else if (lowerMessage.includes("where") || lowerMessage.includes("biggest") || lowerMessage.includes("most") || lowerMessage.includes("highest")) {
+        if (totalSpent === 0) {
+          response = "You haven't tracked any expenses this month yet. Once you add some transactions, I can analyze your top spending habits.";
+        } else {
+          response = `Your highest spending category this month is ${highestCategory} at $${highestAmount}. This represents ${highestPercentage}% of your total monthly expenditures.`;
+        }
+      } else if (lowerMessage.match(/\b(total|how much|spent)\b/)) {
+        response = `You have spent a total of $${totalSpent} so far this month across ${currentMonthExpenses.length} transactions.`;
+      } else {
+        // Check for specific category questions
+        const categories = ["Housing", "Food & Dining", "Transportation", "Shopping", "Entertainment", "Healthcare", "Travel", "Education", "Personal Care"];
+        let foundCategory = false;
+        
+        for (const cat of categories) {
+          if (lowerMessage.includes(cat.toLowerCase().split(" ")[0])) {
+            const catTotal = categoryTotals[cat] || 0;
+            response = `You have spent $${catTotal} on ${cat} this month.`;
+            foundCategory = true;
+            break;
+          }
+        }
+        
+        if (!foundCategory && lowerMessage.length > 10) {
+            response = "That is an excellent question. While I don't have a specific answer for that exact query right now, I strongly suggest reviewing your detailed Reports dashboard to visualize your long-term trends. Is there anything specific about your monthly budget or top categories I can clarify?";
+        }
+      }
+
+      return res.json({ response });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   });
 
-  app.get("/api/admin/users", requireAuth, async (req, res) => {
+  app.get("/api/subscriptions", requireAuth, async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
-      const expenses = await storage.getAllExpenses();
-      const result = users.map(u => {
-        const { password: _, ...safeUser } = u;
-        const userExpenses = expenses.filter(e => e.userId === u.id);
-        return {
-          ...safeUser,
-          expenseCount: userExpenses.length,
-          totalSpent: userExpenses.reduce((s, e) => s + e.amount, 0),
-        };
-      });
-      return res.json(result);
-    } catch (e: any) {
-      return res.status(500).json({ error: e.message });
-    }
-  });
+      const expenses = await storage.getExpenses(req.session.userId!);
+      
+      const expenseGroups = expenses.reduce((acc: any, e) => {
+        const key = `${e.description.trim()}-${e.amount}`;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(e);
+        return acc;
+      }, {});
 
-  app.get("/api/admin/expenses", requireAuth, async (req, res) => {
-    try {
-      const expenses = await storage.getAllExpenses();
-      const users = await storage.getAllUsers();
-      const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
-      const result = expenses.map(e => ({ ...e, userName: userMap[e.userId] || "Unknown" }));
-      return res.json(result);
+      const subscriptions = [];
+      const now = new Date();
+
+      for (const [key, group] of Object.entries<any[]>(expenseGroups)) {
+        if (group.length > 1) {
+          group.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const latest = group[0];
+          const latestDate = new Date(latest.date);
+          
+          const daysSinceLastPayment = (now.getTime() - latestDate.getTime()) / (1000 * 3600 * 24);
+          
+          if (daysSinceLastPayment <= 45) {
+            const nextPaymentDate = new Date(latestDate);
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+            
+            subscriptions.push({
+              id: key,
+              name: latest.description,
+              amount: latest.amount,
+              category: latest.category,
+              billingCycle: "Monthly",
+              lastPaymentDate: latest.date,
+              nextPaymentDate: nextPaymentDate.toISOString().split("T")[0]
+            });
+          }
+        }
+      }
+
+      return res.json(subscriptions);
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
@@ -345,7 +471,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       username: "demo",
       password: "demo123",
       name: "Alex Johnson",
-      email: "alex@fintrack.app",
+      email: "alex@walletwatch.app",
       country: "United States",
       currency: "USD",
       currencySymbol: "$",
@@ -378,7 +504,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       username: "sarah",
       password: "sarah123",
       name: "Sarah Chen",
-      email: "sarah@fintrack.app",
+      email: "sarah@walletwatch.app",
       country: "United Kingdom",
       currency: "GBP",
       currencySymbol: "£",

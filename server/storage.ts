@@ -53,7 +53,8 @@ const budgetSchema = new Schema<IBudgetDocument>({
   userId: { type: String, required: true },
   month: { type: Number, required: true },
   year: { type: Number, required: true },
-  amount: { type: Number, required: true }
+  amount: { type: Number, required: true },
+  categories: { type: String, default: null }
 });
 
 const UserModel = mongoose.models.User || mongoose.model<IUserDocument>("User", userSchema);
@@ -223,6 +224,9 @@ export class MongoStorage implements IStorage {
     const existing = await BudgetModel.findOne({ userId, month: budget.month, year: budget.year });
     if (existing) {
       existing.amount = budget.amount;
+      if (budget.categories !== undefined) {
+        existing.categories = budget.categories;
+      }
       await existing.save();
       return this.mapBudget(existing);
     }

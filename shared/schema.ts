@@ -31,6 +31,7 @@ export const budgets = pgTable("budgets", {
   month: integer("month").notNull(),
   year: integer("year").notNull(),
   amount: real("amount").notNull(),
+  categories: text("categories"), // JSON string
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, avatar: true, isAdmin: true, currency: true, currencySymbol: true }).extend({

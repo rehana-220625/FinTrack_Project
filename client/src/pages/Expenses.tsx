@@ -6,6 +6,9 @@ import {
   Coffee, Car, ShoppingCart, Zap, Dumbbell, Home, Plane, BookOpen, MoreHorizontal,
   Calendar, ChevronDown
 } from "lucide-react";
+import {
+  PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "recharts";
 import { Layout } from "@/components/Layout";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -146,6 +149,64 @@ export default function Expenses() {
 
   const totalFiltered = filtered.reduce((s, e) => s + e.amount, 0);
 
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const monthExpenses = expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  // Category breakdown for Pie Chart
+  const categoryData = Object.entries(
+    monthExpenses.reduce((acc: Record<string, number>, e) => {
+      acc[e.category] = (acc[e.category] || 0) + e.amount;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+  // Monthly breakdown for Bar Chart
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    const total = expenses.filter(e => {
+      const ed = new Date(e.date);
+      return ed.getMonth() + 1 === m && ed.getFullYear() === y;
+    }).reduce((s, e) => s + e.amount, 0);
+    return { month: monthNames[d.getMonth()], amount: total };
+  });
+
+  // Weekly trend for Line Chart
+  const trendData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    const dayStr = d.toISOString().split("T")[0];
+    const total = expenses.filter(e => e.date === dayStr).reduce((s, e) => s + e.amount, 0);
+    return {
+      day: `${d.getDate()}/${d.getMonth() + 1}`,
+      amount: total,
+    };
+  });
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-card border border-card-border rounded-xl px-4 py-3 shadow-xl">
+          {label && <p className="text-xs text-muted-foreground mb-1">{label}</p>}
+          {payload.map((p: any, i: number) => (
+            <p key={i} className="text-sm font-semibold" style={{ color: p.color || p.fill }}>
+              {p.name}: {sym}{Number(p.value).toFixed(2)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Layout>
       <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -271,6 +332,83 @@ export default function Expenses() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Dynamic Graphs (Render on Scroll via whileInView) */}
+        {expenses.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-4">
+            {/* Pie Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5 }}
+              className="bg-card border border-card-border rounded-2xl p-6"
+            >
+              <h3 className="font-semibold text-foreground mb-1">Categories</h3>
+              <p className="text-xs text-muted-foreground mb-4">This month's breakdown</p>
+              <ResponsiveContainer width="100%" height={160}>
+                {categoryData.length > 0 ? (
+                  <PieChart>
+                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={2} dataKey="value">
+                      {categoryData.map((entry, i) => (
+                        <Cell key={i} fill={CATEGORY_COLORS[entry.name] || "#94a3b8"} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data</div>
+                )}
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Bar Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-card border border-card-border rounded-2xl p-6"
+            >
+              <h3 className="font-semibold text-foreground mb-1">Monthly</h3>
+              <p className="text-xs text-muted-foreground mb-4">Last 6 months comparison</p>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={monthlyData} margin={{ top: 0, right: 0, bottom: 0, left: -25 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-10" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10, fill: "currentColor" }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 10, fill: "currentColor" }} className="text-muted-foreground" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="amount" name="Expenses" radius={[4, 4, 0, 0]}>
+                    {monthlyData.map((_, i) => (
+                      <Cell key={i} fill={i === monthlyData.length - 1 ? "#3b82f6" : "#6366f1"} fillOpacity={i === monthlyData.length - 1 ? 1 : 0.6} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Line Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-card border border-card-border rounded-2xl p-6"
+            >
+              <h3 className="font-semibold text-foreground mb-1">Weekly</h3>
+              <p className="text-xs text-muted-foreground mb-4">Last 7 days spending</p>
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={trendData} margin={{ top: 0, right: 0, bottom: 0, left: -25 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-10" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: "currentColor" }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 10, fill: "currentColor" }} className="text-muted-foreground" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="amount" name="Expenses" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3">

@@ -4,20 +4,41 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Receipt, PiggyBank, BarChart3, User, LogOut,
-  Menu, X, Sun, Moon, Bell, ChevronRight, Zap, Shield
+  Menu, X, Sun, Moon, Bell, ChevronRight, Zap, Shield, Wallet, AlertCircle, CheckCircle2, Repeat
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "./ThemeProvider";
 import { logout } from "@/lib/auth";
 import { GravityModeButton } from "./GravityMode";
 import { useToast } from "@/hooks/use-toast";
 
+// API fetch functions (adjust endpoint as per your backend)
+const fetchBudgetForUser = async () => {
+  const res = await fetch("/api/budgets/current");
+  if (!res.ok) throw new Error("Failed to fetch budget");
+  return res.json(); // { amount: number }
+};
+
+const fetchExpensesForUser = async () => {
+  const res = await fetch("/api/expenses");
+  if (!res.ok) throw new Error("Failed to fetch expenses");
+  return res.json(); // returns array
+};
+
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/expenses", label: "Adding Expense", icon: Receipt },
-  { path: "/budget", label: "Setting Monthly Budgets", icon: PiggyBank },
+  { path: "/budget", label: "Setting Budgets", icon: PiggyBank },
+  { path: "/subscriptions", label: "Subscriptions", icon: Repeat },
   { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/profile", label: "Profile", icon: User },
-  { path: "/admin", label: "Admin Page", icon: Shield }
+  { path: "/profile", label: "Profile", icon: User }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +47,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
 
-  const { data: user } = useQuery<any>({ queryKey: ["/api/auth/me"] });
+  const { data: user } = useQuery({ queryKey: ["/api/auth/me"], queryFn: async () => {
+    const res = await fetch("/api/auth/me");
+    if (!res.ok) throw new Error("Failed to fetch user");
+    return res.json();
+  } });
+
+  // Fetch dynamic budget & expenses (React Query v5 object form)
+  const { data: budgetData } = useQuery({
+    queryKey: ["/api/budgets/current"],
+    queryFn: fetchBudgetForUser
+  });
+
+  const { data: expensesList = [] } = useQuery({
+    queryKey: ["/api/expenses"],
+    queryFn: fetchExpensesForUser
+  });
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const totalExpenses = (expensesList || []).filter((e: any) => {
+    const d = new Date(e.date);
+    return d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear;
+  }).reduce((s: number, e: any) => s + e.amount, 0);
+
+  const totalBudget = budgetData?.amount || 0;
+  const sym = user?.currencySymbol || "$";
 
   const handleLogout = async () => {
     await logout();
@@ -34,11 +81,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
     toast({ title: "Logged out", description: "See you soon!" });
   };
 
-  const initials = user?.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "U";
+  const initials =
+    user?.name
+      ?.split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "U";
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Mobile overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -51,25 +103,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
       <motion.aside
         initial={false}
         animate={{ x: sidebarOpen ? 0 : -300 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`
-          fixed lg:relative lg:translate-x-0 z-50 h-full w-72 flex flex-col
-          bg-card border-r border-card-border
-          lg:flex
-        `}
+        className="fixed lg:relative lg:translate-x-0 z-50 h-full w-72 flex flex-col bg-card border-r border-card-border"
         style={{ transform: undefined }}
       >
-        {/* Logo */}
         <div className="flex items-center gap-3 p-6 border-b border-card-border">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg">
-            <Zap size={18} className="text-white" />
+            <Wallet size={18} className="text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-base text-foreground">FinTrack</h1>
+            <h1 className="font-bold text-base text-foreground">walletWatch</h1>
             <p className="text-xs text-muted-foreground">Smart Budget Control</p>
           </div>
           <button
@@ -80,126 +126,154 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* User info */}
         <div className="p-4 border-b border-card-border">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-violet-500/10 border border-blue-500/20">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{user?.name || "User"}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email || ""}</p>
+              <p className="text-sm font-semibold text-foreground truncate">
+                {user?.name || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email || ""}
+              </p>
             </div>
-            {user?.isAdmin && (
-              <span className="text-xs px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-400 font-medium shrink-0">Admin</span>
-            )}
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">Menu</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">
+            Menu
+          </p>
           {navItems.map(({ path, label, icon: Icon }) => {
-            const isActive = location === path || location.startsWith(path + "/");
-            const isAdmin = path === "/admin";
+            const isActive =
+              location === path || location.startsWith(path + "/");
             return (
               <Link key={path} href={path}>
                 <motion.div
-                  data-testid={`nav-${label.toLowerCase()}`}
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setSidebarOpen(false)}
-                  className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group
-                    ${isActive
-                      ? isAdmin
-                        ? "bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-400 border border-red-500/20"
-                        : "bg-gradient-to-r from-blue-500/20 to-violet-500/20 text-blue-400 border border-blue-500/20"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer ${
+                    isActive
+                      ? "bg-blue-500/20 text-blue-400"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }
-                  `}
+                  }`}
                 >
-                  <Icon
-                    size={18}
-                    className={isActive
-                      ? isAdmin ? "text-red-400" : "text-blue-400"
-                      : "text-muted-foreground group-hover:text-foreground"}
-                  />
+                  <Icon size={18} />
                   <span className="font-medium text-sm">{label}</span>
-                  {isActive && (
-                    <ChevronRight size={14} className={`ml-auto ${isAdmin ? "text-red-400" : "text-blue-400"}`} />
-                  )}
+                  {isActive && <ChevronRight size={14} className="ml-auto" />}
                 </motion.div>
               </Link>
             );
           })}
         </nav>
 
-        {/* Bottom actions */}
         <div className="p-4 border-t border-card-border space-y-2">
           <GravityModeButton />
           <button
-            data-testid="button-logout"
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 w-full text-sm font-medium group"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-full text-sm font-medium"
           >
-            <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
+            <LogOut size={18} />
             Sign Out
           </button>
         </div>
       </motion.aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <header className="h-16 flex items-center gap-4 px-6 border-b border-card-border bg-card/50 backdrop-blur-sm shrink-0">
+        <header className="h-16 flex items-center gap-4 px-6 border-b border-card-border bg-card/50">
           <button
-            data-testid="button-menu"
             className="lg:hidden p-2 rounded-lg hover:bg-accent text-muted-foreground"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={20} />
           </button>
 
-          {/* Page title */}
-          <div className="hidden sm:block">
-            {navItems.find(n => location.startsWith(n.path)) && (
-              <h2 className="font-semibold text-foreground text-sm">
-                {navItems.find(n => location.startsWith(n.path))?.label}
-              </h2>
-            )}
-          </div>
-
           <div className="ml-auto flex items-center gap-2">
             <button
-              data-testid="button-theme"
               onClick={toggleTheme}
-              className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200"
+              className="p-2 rounded-xl hover:bg-accent"
             >
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button
-              data-testid="button-notifications"
-              className="relative p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-all duration-200"
-            >
-              <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full" />
-            </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs">
-              {initials}
-            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="relative p-2 rounded-xl hover:bg-accent focus:outline-none"
+                >
+                  <Bell size={18} />
+                  {totalExpenses > totalBudget && totalBudget > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-4 py-3 text-sm flex flex-col gap-2">
+                  {totalBudget > 0 ? (
+                    totalExpenses > totalBudget ? (
+                      <div className="flex items-start gap-2 text-red-500">
+                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-semibold">Budget Exceeded</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">You are {sym}{(totalExpenses - totalBudget).toFixed(2)} over budget.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 text-emerald-500">
+                        <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-semibold">On Track</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">You have {sym}{(totalBudget - totalExpenses).toFixed(2)} remaining.</p>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <p className="text-muted-foreground text-xs italic">Set a monthly budget to receive alerts.</p>
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="focus:outline-none">
+                  <div
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs cursor-pointer hover:shadow-md transition-shadow"
+                  >
+                    {initials}
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    {user?.name && <p className="font-medium">{user.name}</p>}
+                    {user?.email && <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>}
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-600 focus:text-red-600 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <motion.div
-            key={location}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="h-full"
-          >
+          <motion.div key={location}>
             {children}
           </motion.div>
         </main>
