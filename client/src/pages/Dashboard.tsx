@@ -10,8 +10,6 @@ import { Layout } from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import type { Expense, Budget } from "@shared/schema";
 import { startOfDay, startOfWeek, startOfMonth, subDays, subWeeks, subMonths, format, isSameDay, isSameWeek, isSameMonth } from "date-fns";
-
-
 const CATEGORY_ICONS: Record<string, any> = {
   "Food & Dining": Coffee,
   "Transportation": Car,
@@ -23,7 +21,6 @@ const CATEGORY_ICONS: Record<string, any> = {
   "Education": BookOpen,
   "Other": MoreHorizontal,
 };
-
 const CATEGORY_COLORS: Record<string, string> = {
   "Food & Dining": "#3b82f6",
   "Transportation": "#8b5cf6",
