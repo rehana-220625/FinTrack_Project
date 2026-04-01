@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,18 +16,18 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.username || !form.password) {
+    if (!form.email || !form.password) {
       setError("Please fill in all fields.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await login(form.username, form.password);
+      await login(form.email, form.password);
       toast({ title: "Welcome back!", description: "You're now logged in." });
       navigate("/dashboard");
     } catch (err: any) {
-      setError("Invalid username or password. Try demo / demo123");
+      setError("Invalid email or password. Try alex@walletwatch.app / demo123");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function Login() {
           className="mb-6 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-center"
         >
           <p className="text-xs text-blue-400">
-            Demo account: <strong>demo</strong> / <strong>demo123</strong>
+            Demo account: <strong>alex@walletwatch.app</strong> / <strong>demo123</strong>
           </p>
         </motion.div>
 
@@ -80,25 +80,25 @@ export default function Login() {
           className="bg-card border border-card-border rounded-3xl p-8 shadow-2xl"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username */}
+            {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground" htmlFor="username">
-                Username
+              <label className="text-sm font-medium text-foreground" htmlFor="email">
+                Email Address
               </label>
               <div className={`relative rounded-xl border transition-all duration-200 ${
-                focused === "username" ? "border-blue-500 ring-2 ring-blue-500/20" : "border-input"
+                focused === "email" ? "border-blue-500 ring-2 ring-blue-500/20" : "border-input"
               } bg-background`}>
                 <input
-                  id="username"
-                  data-testid="input-username"
-                  type="text"
-                  value={form.username}
-                  onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                  onFocus={() => setFocused("username")}
+                  id="email"
+                  data-testid="input-email"
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  onFocus={() => setFocused("email")}
                   onBlur={() => setFocused(null)}
-                  placeholder="Enter your username"
+                  placeholder="Enter your email address"
                   className="w-full px-4 py-3 bg-transparent text-foreground placeholder:text-muted-foreground text-sm outline-none rounded-xl"
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </div>

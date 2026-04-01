@@ -95,14 +95,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           .json({ error: result.error.issues[0].message });
       }
 
-      const existing = await storage.getUserByUsername(
+      const existingUsername = await storage.getUserByUsername(
         result.data.username
       );
 
-      if (existing) {
+      if (existingUsername) {
         return res
           .status(409)
           .json({ error: "Username already taken" });
+      }
+
+      const existingEmail = await storage.getUserByEmail(
+        result.data.email
+      );
+
+      if (existingEmail) {
+        return res
+          .status(409)
+          .json({ error: "Email already taken" });
       }
 
       const hashedPassword = await bcrypt.hash(result.data.password, 10);
@@ -129,14 +139,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { email, password } = req.body;
 
-      const user = await storage.getUserByUsername(username);
+      const user = await storage.getUserByEmail(email);
 
       if (!user) {
         return res
           .status(401)
-          .json({ error: "Invalid username or password" });
+          .json({ error: "Invalid email or password" });
       }
 
       const valid = await bcrypt.compare(password, user.password);
@@ -144,7 +154,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!valid) {
         return res
           .status(401)
-          .json({ error: "Invalid username or password" });
+          .json({ error: "Invalid email or password" });
       }
 
       req.session.userId = user.id;

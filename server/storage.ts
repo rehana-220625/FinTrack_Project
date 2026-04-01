@@ -22,7 +22,7 @@ const userSchema = new Schema<IUserDocument>({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   name: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   avatar: { type: String, default: null },
   isAdmin: { type: Boolean, default: false },
   country: { type: String, default: "United States" },
@@ -66,6 +66,7 @@ const DATA_FILE = path.join(process.cwd(), "data.json");
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser, isAdmin?: boolean): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
   getExpenses(userId: string): Promise<Expense[]>;
@@ -153,6 +154,11 @@ export class MongoStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const user = await UserModel.findOne({ username });
+    return user ? this.mapUser(user) : undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const user = await UserModel.findOne({ email });
     return user ? this.mapUser(user) : undefined;
   }
 

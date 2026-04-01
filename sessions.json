@@ -48,5 +48,15 @@
       "path": "/"
     },
     "userId": "8ec507cd-2429-42e3-84ab-e55fd70cdb4a"
+  },
+  "CHklVecr5NgZMPkzVn4nHFehsTcvtc9_": {
+    "cookie": {
+      "originalMaxAge": 604800000,
+      "expires": "2026-04-08T16:21:25.820Z",
+      "secure": false,
+      "httpOnly": true,
+      "path": "/"
+    },
+    "userId": "9cc31bf0-d624-4549-bbae-2367a5ab9977"
   }
-}  
+}
